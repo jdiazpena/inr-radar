@@ -36,13 +36,14 @@ import pandas as pd
 
 TRAIN_SCRIPT = "train_radar_3d_window_reg.py"
 
-BASE_OUTPUT_DIR = Path("outputs/lambda_sweep_window100_size11")
+BASE_OUTPUT_DIR = Path("outputs/lambda_sweep_window100_size11_focused")
 
 WINDOW_START_INDEX = 100
 WINDOW_SIZE_RECORDS = 11
 
 NUM_STEPS = 10000
 SEED = 0
+REG_RAMP_FRAC = 0.2
 
 # Keep these fixed for this sweep.
 NUM_COLLOCATION = 8192
@@ -52,19 +53,19 @@ COLLOCATION_GRID_NY = 80
 # Sweep values.
 # Start modest. This is already 6 x 4 = 24 runs.
 LAMBDA_CURV_XY_VALUES = [
-    0.0,
-    5e-10,
-    1e-9,
-    3e-9,
+    5e-9,
+    7.5e-9,
     1e-8,
-    3e-8,
+    2.5e-8,
+    5e-8
 ]
 
 LAMBDA_CURV_T_VALUES = [
-    0.0,
-    3e-9,
-    1e-8,
-    3e-8,
+    1e-9,
+    2.5e-9,
+    5e-9,
+    7.5e-9,
+    1e-8
 ]
 
 
@@ -102,13 +103,31 @@ def read_run_summary(output_dir: Path) -> dict:
             "status": "empty_history",
         }
 
+    # final = hist.iloc[-1]
+
+    # best_total_idx = hist["total_loss"].idxmin()
+    # best_data_idx = hist["data_loss"].idxmin()
+
+    # best_total = hist.loc[best_total_idx]
+    # best_data = hist.loc[best_data_idx]
+
     final = hist.iloc[-1]
 
-    best_total_idx = hist["total_loss"].idxmin()
-    best_data_idx = hist["data_loss"].idxmin()
+    # Do not select best checkpoints inside the regularization ramp.
+    ramp_steps = int(REG_RAMP_FRAC * NUM_STEPS)
 
-    best_total = hist.loc[best_total_idx]
-    best_data = hist.loc[best_data_idx]
+    hist_after_ramp = hist[hist["step"] >= ramp_steps].copy()
+
+    if len(hist_after_ramp) == 0:
+        return {
+            "status": "no_history_after_ramp",
+        }
+
+    best_total_idx = hist_after_ramp["total_loss"].idxmin()
+    best_data_idx = hist_after_ramp["data_loss"].idxmin()
+
+    best_total = hist_after_ramp.loc[best_total_idx]
+    best_data = hist_after_ramp.loc[best_data_idx]
 
     return {
         "status": "ok",

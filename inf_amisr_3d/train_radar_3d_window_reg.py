@@ -874,7 +874,7 @@ def train(args: argparse.Namespace) -> None:
         # This saves the model BEFORE the optimizer step, so the saved
         # weights correspond to the loss values used for the decision.
         # --------------------------------------------------------
-        if step >= ramp_steps:
+        if step > ramp_steps:
             total_scalar = float(total_loss.detach().item())
             data_scalar = float(data_loss.detach().item())
 
